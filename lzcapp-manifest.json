@@ -1,0 +1,15 @@
+{
+  "manifest_version": 1,
+  "name": "GPT Image Playground",
+  "package_name": "gpt-image-playground",
+  "version": "0.7.9",
+  "description": "GPT Image Playground with persistent local storage",
+  "entrypoint": ["node", "server/persistence.mjs"],
+  "service": {
+    "port": 8787,
+    "healthcheck": "/api/health"
+  },
+  "volumes": {
+    "/lzcapp/var": "/lzcapp/var"
+  }
+}
