@@ -3,3 +3,22 @@ upstream/dist/
 dist-lpk/
 lazycat/content/web/
 lazycat/content/LICENSE
+
+# Packaging workspace safety; upstream source remains untouched.
+node_modules/
+dist/
+lazycat/content/persistence/
+dev-proxy.config.json
+.wrangler/
+.env
+.env.*
+!.env.example
+!/upstream/.env.test
+*.log
+*.lpk
+coverage/
+runtime/
+data/
+backups/
+*.bak
+*.tmp
