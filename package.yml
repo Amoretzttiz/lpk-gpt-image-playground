@@ -1,21 +1,17 @@
 package: cloud.lazycat.app.gpt-image-playground
-version: 0.7.9-5
+version: 0.7.8-1
 name: GPT Image Playground
-author: CookSleep and downstream contributors
-homepage: https://github.com/Amoretzttiz/lpk-gpt-image-playground
+author: CookSleep
+homepage: https://github.com/CookSleep/gpt_image_playground
 license: MIT
-description: 基于 GPT Image Playground 的 LazyCat 定制包，提供图片生成、编辑、浏览器画廊与本机持久化服务。
+description: GPT Image Playground v0.7.8 的未修改官方静态前端，封装为 LazyCat 应用。
 permissions:
   required:
     - net.internet
 locales:
   zh-CN:
     name: GPT Image Playground
-    description: >-
-      图形化调用 OpenAI gpt-image-2 / Responses API 的图片生成与编辑工具，支持参考图、遮罩、Agent
-      多轮对话、本地画廊和多服务商。
+    description: 官方 GPT Image Playground v0.7.8 的未修改静态前端 LazyCat 封装。
   en-US:
     name: GPT Image Playground
-    description: >-
-      Web UI for OpenAI gpt-image-2 image generation and editing with reference
-      images, mask editor, Agent chat, and local gallery.
+    description: Unmodified official GPT Image Playground v0.7.8 static frontend packaged for LazyCat.

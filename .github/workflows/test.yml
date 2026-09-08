@@ -17,6 +17,15 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+          cache-dependency-path: upstream/package-lock.json
+      - name: Verify pristine upstream source
+        run: ./scripts/verify-upstream.py
+      - name: Install upstream dependencies
+        run: npm ci --include=dev
+        working-directory: upstream
+      - name: Test upstream
+        run: npm test
+        working-directory: upstream
+      - name: Build upstream
+        run: npm run build
+        working-directory: upstream
