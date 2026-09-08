@@ -25,3 +25,11 @@ lzc-cli project build
 ```
 
 `npm ci` and builds may create ignored files under `upstream/`; provenance verification compares every official tracked file byte-for-byte with the immutable commit. The LPK is emitted under `dist-lpk/`.
+
+## Container image
+
+The packaging-only `packaging/Dockerfile` builds the same unmodified static application and uses the existing LazyCat nginx configuration. It does not enable upstream's separate Docker proxy/preset-injection mode or add an application backend. Node and nginx base images are pinned by digest; the upstream directory is unchanged.
+
+The image publication workflow runs on the `packaging/upstream-v0.7.8` branch or by manual dispatch. It independently tests/builds upstream, starts the real amd64 image, compares every static file and the MIT notice, checks HTTP assets, and only then publishes `ghcr.io/amoretzttiz/lpk-gpt-image-playground:0.7.8-1` and `:latest` for amd64/arm64. Only amd64 is runtime-tested. The `image-bundle` artifact contains an amd64 Docker-load archive, SHA-256 checksums and provenance for the GitHub Release.
+
+The LPK remains a static-content package using its declared nginx runtime; it does not embed this application image. Publishing a container image or Release never installs the production application.

@@ -1,0 +1,134 @@
+name: Publish static application image
+
+on:
+  push:
+    branches: ['packaging/upstream-v0.7.8']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: image-publication
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/amoretzttiz/lpk-gpt-image-playground
+  VERSION: 0.7.8-1
+  NODE_IMAGE: node:24.15.0-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f
+
+jobs:
+  publish:
+    if: github.repository == 'Amoretzttiz/lpk-gpt-image-playground'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify unchanged upstream
+        run: ./scripts/verify-upstream.py
+      - name: Independently test and build the official source
+        run: |
+          docker run --rm -v "$PWD/upstream:/app" -w /app "$NODE_IMAGE" \
+            sh -ec 'npm ci --include=dev && npm test && npm run build'
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the amd64 image for actual runtime verification
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ env.IMAGE }}:${{ env.VERSION }}
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=https://github.com/Amoretzttiz/lpk-gpt-image-playground
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.licenses=MIT
+      - name: Run the actual image and compare its payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p image-bundle/container-web
+          cid=$(docker run -d -p 127.0.0.1:18080:80 "$IMAGE:$VERSION")
+          trap 'docker logs "$cid"; docker rm -f "$cid"' EXIT
+          curl --fail --retry 20 --retry-delay 1 --retry-connrefused \
+            http://127.0.0.1:18080/ -o image-bundle/index.html
+          docker cp "$cid:/lzcapp/pkg/content/web/." image-bundle/container-web/
+          docker cp "$cid:/lzcapp/pkg/content/LICENSE" image-bundle/LICENSE
+          diff -qr upstream/dist image-bundle/container-web
+          cmp upstream/LICENSE image-bundle/LICENSE
+          cmp upstream/dist/index.html image-bundle/index.html
+          python3 - <<'PY'
+          import pathlib, re, urllib.request
+          root = pathlib.Path('image-bundle/container-web')
+          html = (root / 'index.html').read_text()
+          paths = re.findall(r'(?:src|href)="(\./assets/[^\"]+)"', html)
+          assert paths, 'No bundled assets found'
+          for path in paths:
+              relative = path.removeprefix('./')
+              response = urllib.request.urlopen('http://127.0.0.1:18080/' + relative)
+              assert response.read() == (root / relative).read_bytes(), relative
+          print(f'Runtime HTTP and {len(paths)} entry assets passed; payload equals official build')
+          PY
+          docker image inspect "$IMAGE:$VERSION" --format '{{.Id}}' > image-bundle/amd64-image-id.txt
+          docker save "$IMAGE:$VERSION" | gzip -n > "image-bundle/gpt-image-playground-$VERSION-linux-amd64.docker.tar.gz"
+          rm -r image-bundle/container-web image-bundle/index.html
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish amd64 and arm64 images after verification
+        id: publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:latest
+          provenance: mode=max
+          labels: |
+            org.opencontainers.image.source=https://github.com/Amoretzttiz/lpk-gpt-image-playground
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.licenses=MIT
+      - name: Verify registry digest and record provenance
+        shell: bash
+        env:
+          PUBLISHED_DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "$IMAGE@$PUBLISHED_DIGEST"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          root = pathlib.Path('image-bundle')
+          image = next(root.glob('*.docker.tar.gz'))
+          provenance = {
+              'source_commit': os.environ['GITHUB_SHA'],
+              'upstream_commit': pathlib.Path('UPSTREAM_COMMIT').read_text().strip(),
+              'image': os.environ['IMAGE'], 'version': os.environ['VERSION'],
+              'registry_digest': os.environ['PUBLISHED_DIGEST'],
+              'platforms': ['linux/amd64', 'linux/arm64'],
+              'runtime_tested_platforms': ['linux/amd64'],
+              'mode': 'unmodified upstream static deployment',
+              'image_archive': image.name,
+              'image_archive_sha256': hashlib.sha256(image.read_bytes()).hexdigest(),
+              'workflow_run': os.environ['GITHUB_SERVER_URL'] + '/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + os.environ['GITHUB_RUN_ID'],
+          }
+          (root / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+          checks = ''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in sorted(root.iterdir()) if p.is_file())
+          (root / 'SHA256SUMS').write_text(checks)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-bundle
+          path: image-bundle/
+          if-no-files-found: error
+          retention-days: 30
