@@ -7,19 +7,3 @@ services:
     image: registry.lazycat.cloud/nginx:1.27.3
     entrypoint: /bin/sh
     command: /lzcapp/pkg/content/start.sh
-    environment:
-      - TZ=Asia/Shanghai
-      - DEFAULT_API_URL=https://api.openai.com/v1
-      - API_PROXY_URL=https://api.openai.com/v1
-      - ENABLE_API_PROXY=false
-      - LOCK_API_PROXY=false
-      - SHOW_DEFAULT_CONFIG_ONLY=false
-    depends_on:
-      - persistence
-  persistence:
-    image: registry.lazycat.cloud/longixaoyi/library/node:5a06abb2657c9976
-    command: node /lzcapp/pkg/content/persistence/persistence.mjs
-    environment:
-      - PORT=8787
-      - PERSISTENCE_DIR=/lzcapp/var/gpt-image-playground
-      - BACKUP_DIR=/lzcapp/var/gpt-image-playground/backups

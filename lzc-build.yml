@@ -1,4 +1,4 @@
-buildscript: rm -rf lazycat/content/web lazycat/content/persistence && npm ci --include=dev && VITE_DEFAULT_API_URL=__VITE_DEFAULT_API_URL_PLACEHOLDER__ VITE_API_PROXY_AVAILABLE=__VITE_API_PROXY_AVAILABLE_PLACEHOLDER__ VITE_API_PROXY_LOCKED=__VITE_API_PROXY_LOCKED_PLACEHOLDER__ VITE_DOCKER_DEPLOYMENT=__VITE_DOCKER_DEPLOYMENT_PLACEHOLDER__ VITE_DOCKER_LEGACY_API_URL_USED=__VITE_DOCKER_LEGACY_API_URL_USED_PLACEHOLDER__ VITE_SHOW_PRESET_CONFIG_ONLY=__VITE_SHOW_PRESET_CONFIG_ONLY_PLACEHOLDER__ VITE_LOCK_PRESET_CONFIG_PARAMS=__VITE_LOCK_PRESET_CONFIG_PARAMS_PLACEHOLDER__ VITE_PREVENT_PRESET_CONFIG_DELETION=__VITE_PREVENT_PRESET_CONFIG_DELETION_PLACEHOLDER__ npm run build && mkdir -p lazycat/content/web lazycat/content/persistence dist-lpk && cp -a dist/. lazycat/content/web/ && cp server/*.mjs lazycat/content/persistence/
+buildscript: cd upstream && npm ci --include=dev && npm run build && cd .. && rm -rf lazycat/content/web && mkdir -p lazycat/content/web dist-lpk && cp -a upstream/dist/. lazycat/content/web/ && cp upstream/LICENSE lazycat/content/LICENSE
 manifest: ./lzc-manifest.yml
 package: ./package.yml
 contentdir: ./lazycat/content
