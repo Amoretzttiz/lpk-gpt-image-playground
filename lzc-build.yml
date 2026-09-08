@@ -1,4 +1,4 @@
-buildscript: cd upstream && npm ci --include=dev && npm run build && cd .. && rm -rf lazycat/content/web && mkdir -p lazycat/content/web dist-lpk && cp -a upstream/dist/. lazycat/content/web/
+buildscript: cd upstream && npm ci --include=dev && npm run build && cd .. && rm -rf lazycat/content/web && mkdir -p lazycat/content/web dist-lpk && cp -a upstream/dist/. lazycat/content/web/ && cp upstream/LICENSE lazycat/content/LICENSE
 manifest: ./lzc-manifest.yml
 package: ./package.yml
 contentdir: ./lazycat/content
